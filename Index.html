@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Encryption Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            width: 80%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        select,
+        textarea,
+        input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+        }
+
+        textarea {
+            height: 100px;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            margin-top: 1rem;
+        }
+
+        #result {
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Encryption Tool</h1>
+        <form id="encryptionForm">
+            <div class="form-group">
+                <label for="encryption_type">Choose Type:</label>
+                <select name="encryption_type" id="encryption_type">
+                    <option value="Base64">Base64</option>
+                    <option value="Hex">Hex</option>
+                    <option value="Octal">Octal</option>
+                    <option value="ASCII">ASCII</option>
+                    <option value="Sha-256">Sha-256</option>
+                    <option value="Md5">Md5</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="action">Action:</label>
+                <select name="action" id="action">
+                    <option value="encrypt">Encrypt</option>
+                    <option value="decrypt">Decrypt</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="data">Enter Data:</label>
+                <textarea name="data" id="data" rows="5"></textarea>
+            </div>
+            <button type="submit">Submit</button>
+        </form>
+        <div id="result" class="result"></div>
+    </div>
+    <script>
+        // دوال التشفير والفك باستخدام TextEncoder و TextDecoder
+        function encodeBase64(data) {
+            const textEncoder = new TextEncoder();
+            const encodedData = textEncoder.encode(data);
+            return btoa(String.fromCharCode(...encodedData));
+        }
+
+        function decodeBase64(data) {
+            const decodedData = atob(data).split('').map(c => c.charCodeAt(0));
+            const textDecoder = new TextDecoder();
+            return textDecoder.decode(new Uint8Array(decodedData));
+        }
+
+        function encryptHex(data) {
+            return data.split('').map(c => c.charCodeAt(0).toString(16)).join('');
+        }
+
+        function decryptHex(data) {
+            let hexes = data.match(/.{1,2}/g) || [];
+            let result = '';
+            for(let hex of hexes) {
+                result += String.fromCharCode(parseInt(hex, 16));
+            }
+            return result;
+        }
+
+        function encryptOctal(data) {
+            return data.split('').map(c => c.charCodeAt(0).toString(8)).join(' ');
+        }
+
+        function decryptOctal(data) {
+            let octals = data.split(' ');
+            let result = '';
+            for(let oct of octals) {
+                result += String.fromCharCode(parseInt(oct, 8));
+            }
+            return result;
+        }
+
+        function encryptASCII(data) {
+            return data.split('').map(c => c.charCodeAt(0)).join(' ');
+        }
+
+        function decryptASCII(data) {
+            let ascii = data.split(' ');
+            let result = '';
+            for(let char of ascii) {
+                result += String.fromCharCode(char);
+            }
+            return result;
+        }
+
+        function encryptSha256(data) {
+            return crypto.subtle.digest('SHA-256', new TextEncoder().encode(data))
+                .then(hashBuffer => {
+                    return Array.from(new Uint8Array(hashBuffer))
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join('');
+                });
+        }
+
+        function encryptMd5(data) {
+            return Promise.resolve(CryptoJS.MD5(data).toString());
+        }
+
+        document.getElementById('encryptionForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(this);
+            const action = formData.get('action');
+            const encryptionType = formData.get('encryption_type');
+            const data = formData.get('data');
+            
+            let resultPromise;
+            switch (encryptionType) {
+                case 'Base64':
+                    resultPromise = Promise.resolve(action === 'encrypt' ? encodeBase64(data) : decodeBase64(data));
+                    break;
+                case 'Hex':
+                    resultPromise = Promise.resolve(action === 'encrypt' ? encryptHex(data) : decryptHex(data));
+                    break;
+                case 'Octal':
+                    resultPromise = Promise.resolve(action === 'encrypt' ? encryptOctal(data) : decryptOctal(data));
+                    break;
+                case 'ASCII':
+                    resultPromise = Promise.resolve(action === 'encrypt' ? encryptASCII(data) : decryptASCII(data));
+                    break;
+                case 'Sha-256':
+                    if (action === 'encrypt') {
+                        resultPromise = encryptSha256(data);
+                    } else {
+                        resultPromise = Promise.resolve('Decryption not supported for Sha-256');
+                    }
+                    break;
+                case 'Md5':
+                    if (action === 'encrypt') {
+                        resultPromise = encryptMd5(data);
+                    } else {
+                        resultPromise = Promise.resolve('Decryption not supported for Md5');
+                    }
+                    break;
+                default:
+                    resultPromise = Promise.resolve('Unsupported encryption type');
+            }
+            
+            resultPromise.then(result => {
+                document.getElementById('result').innerHTML = `<h2>Result:</h2><textarea readonly>${result}</textarea><button onclick="copyToClipboard()">Copy</button>`;
+            });
+        });
+
+        function copyToClipboard() {
+            const copyText = document.querySelector('#result textarea');
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); /* For mobile devices */
+            document.execCommand('copy');
+            alert('Copied the text: ' + copyText.value);
+        }
+    </script>
+</body>
+</html>
